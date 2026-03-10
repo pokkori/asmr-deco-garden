@@ -44,11 +44,11 @@ const { width: W } = Dimensions.get("window");
 // 音源マップ（require は静的解析のため事前定義必須）
 // ──────────────────────────────────────────────────────────────
 const SOUND_MAP: Record<string, number> = {
-  "collect_common.mp3":    require("../assets/sounds/collect_common.mp3"),
-  "collect_rare.mp3":      require("../assets/sounds/collect_rare.mp3"),
-  "collect_epic.mp3":      require("../assets/sounds/collect_epic.mp3"),
-  "collect_legendary.mp3": require("../assets/sounds/collect_legendary.mp3"),
-  "reveal.mp3":            require("../assets/sounds/reveal.mp3"),
+  "collect_common.wav":    require("../assets/sounds/collect_common.wav"),
+  "collect_rare.wav":      require("../assets/sounds/collect_rare.wav"),
+  "collect_epic.wav":      require("../assets/sounds/collect_epic.wav"),
+  "collect_legendary.wav": require("../assets/sounds/collect_legendary.wav"),
+  "reveal.wav":            require("../assets/sounds/reveal.wav"),
 };
 
 const soundCache: Partial<Record<string, Audio.Sound>> = {};
