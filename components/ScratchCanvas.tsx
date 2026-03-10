@@ -224,7 +224,7 @@ export function ScratchCanvas({
       const finished = currentPathRef.current;
       currentPathRef.current = null;
       runOnJS(setCurrentPath)(null);
-      runOnJS(setPaths)((prev) => {
+      runOnJS(setPaths)((prev: SkPath[]) => {
         const next = [...prev, finished];
         // 面積計算は非同期で
         setTimeout(() => commitCurrentPath(finished, next), 0);
