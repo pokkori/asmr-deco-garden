@@ -10,5 +10,5 @@ echo.
 echo iPhone で Expo Go を起動してQRを読んでください
 echo (App Store で "Expo Go" を検索してインストール)
 echo.
-npx expo start --tunnel
+npx expo start --tunnel --clear
 pause
