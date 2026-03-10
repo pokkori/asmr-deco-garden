@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "ひみつのデコ・ガーデン",
+    "slug": "asmr-deco-garden",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A1030"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.pokkori.asmrdecoGarden"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1A1030"
+      },
+      "package": "com.pokkori.asmrdecoGarden"
+    },
+    "plugins": [
+      [
+        "expo-av",
+        { "microphonePermission": false }
+      ]
+    ]
+  }
+}
