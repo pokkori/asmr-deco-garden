@@ -5,15 +5,18 @@
  *
  * タブ構成:
  *   🪄 スクラッチ  →  CollectionScreen
- *   🌸 にわ        →  DecoGardenScreen
+ *   🌸 にわ        →  DecoGardenScreen（レベルシステム内蔵）
+ *   📖 ずかん      →  CollectionBook
  *
  * 追加:
  *   - FTUE（初回のみ）
  *   - AsyncStorage でインベントリ永続化
+ *   - 毎日ログインボーナス（useDailyBonus）
+ *   - ガーデンレベルアップ連携（ボーナススクラッチ）
  * ──────────────────────────────────────────────────────────────
  */
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   Pressable,
@@ -33,8 +36,12 @@ import * as Haptics from "expo-haptics";
 
 import { CollectionScreen } from "./components/CollectionScreen";
 import { DecoGardenScreen } from "./components/DecoGardenScreen";
+import { CollectionBook } from "./components/CollectionBook";
 import { FTUEGuide } from "./components/FTUEGuide";
+import { DailyBonusModal } from "./components/DailyBonusModal";
 import { ItemDef } from "./constants/items";
+import { useDailyBonus } from "./hooks/useDailyBonus";
+import { useNotifications } from "./hooks/useNotifications";
 
 const { width: W } = Dimensions.get("window");
 
@@ -43,12 +50,15 @@ const { width: W } = Dimensions.get("window");
 // ──────────────────────────────────────────────────────────────
 const STORAGE_KEY_INVENTORY = "deco_garden_inventory";
 const STORAGE_KEY_FTUE_DONE = "deco_garden_ftue_done";
+// 全収集済みアイテム種類記録（図鑑用）
+const STORAGE_KEY_EVER_COLLECTED = "deco_garden_ever_collected";
 
-type Tab = "scratch" | "garden";
+type Tab = "scratch" | "garden" | "book";
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: "scratch", label: "スクラッチ", emoji: "🪄" },
   { id: "garden",  label: "にわ",       emoji: "🌸" },
+  { id: "book",    label: "ずかん",     emoji: "📖" },
 ];
 
 // ──────────────────────────────────────────────────────────────
@@ -133,8 +143,33 @@ const tabStyles = StyleSheet.create({
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>("scratch");
   const [inventory, setInventory] = useState<ItemDef[]>([]);
+  // 図鑑用：一度でも収集したことのあるアイテムリスト（重複なし・永続）
+  const [everCollected, setEverCollected] = useState<ItemDef[]>([]);
   const [showFTUE, setShowFTUE] = useState(false);
+  const [showDailyBonus, setShowDailyBonus] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // ──────────────────────────────────
+  // デイリーボーナス
+  // ──────────────────────────────────
+  const dailyBonus = useDailyBonus();
+
+  // ──────────────────────────────────
+  // プッシュ通知（FTUEが完了してから許可リクエスト）
+  // ──────────────────────────────────
+  useNotifications({
+    streak: dailyBonus.streak,
+    enabled: !loading && !showFTUE && dailyBonus.isLoaded,
+  });
+
+  // ロード完了後にデイリーボーナスモーダルを表示
+  useEffect(() => {
+    if (!loading && dailyBonus.isLoaded && dailyBonus.isTodayFirst) {
+      // 少し遅らせてFTUEと被らないように
+      const timer = setTimeout(() => setShowDailyBonus(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, dailyBonus.isLoaded, dailyBonus.isTodayFirst]);
 
   // ──────────────────────────────────
   // 初期化: AsyncStorage 読み込み
@@ -142,12 +177,16 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const [rawInv, ftueDone] = await Promise.all([
+        const [rawInv, ftueDone, rawEver] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY_INVENTORY),
           AsyncStorage.getItem(STORAGE_KEY_FTUE_DONE),
+          AsyncStorage.getItem(STORAGE_KEY_EVER_COLLECTED),
         ]);
         if (rawInv) {
           setInventory(JSON.parse(rawInv));
+        }
+        if (rawEver) {
+          setEverCollected(JSON.parse(rawEver));
         }
         if (!ftueDone) {
           setShowFTUE(true);
@@ -171,18 +210,34 @@ export default function App() {
     }
   }, []);
 
+  const saveEverCollected = useCallback(async (items: ItemDef[]) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY_EVER_COLLECTED, JSON.stringify(items));
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // ──────────────────────────────────
   // アイテム収集
   // ──────────────────────────────────
   const handleCollect = useCallback(
     (item: ItemDef) => {
+      // インベントリに追加
       setInventory((prev) => {
         const next = [...prev, item];
         saveInventory(next);
         return next;
       });
+      // 図鑑用 everCollected にも追加（同IDは重複しない）
+      setEverCollected((prev) => {
+        if (prev.some((i) => i.id === item.id)) return prev;
+        const next = [...prev, item];
+        saveEverCollected(next);
+        return next;
+      });
     },
-    [saveInventory]
+    [saveInventory, saveEverCollected]
   );
 
   // ──────────────────────────────────
@@ -203,6 +258,30 @@ export default function App() {
     },
     [saveInventory]
   );
+
+  // ──────────────────────────────────
+  // レベルアップボーナス（スクラッチ+1）
+  // useDailyLimit は CollectionScreen 内部で管理しているため、
+  // ここでは「ボーナス付与通知」のみを受け取り、
+  // CollectionScreen に ref 経由で渡す方法の代わりに
+  // App レベルのボーナスカウンター stateで管理する
+  // ──────────────────────────────────
+  const [pendingBonusCount, setPendingBonusCount] = useState(0);
+
+  const handleBonusGranted = useCallback(() => {
+    setPendingBonusCount((c) => c + 1);
+  }, []);
+
+  // デイリーボーナスで+1
+  const handleDailyBonusClose = useCallback(() => {
+    setShowDailyBonus(false);
+    if (dailyBonus.isTodayFirst && !dailyBonus.isStreakBonus) {
+      setPendingBonusCount((c) => c + 1);
+    } else if (dailyBonus.isStreakBonus) {
+      // 7日連続は+2枚
+      setPendingBonusCount((c) => c + 2);
+    }
+  }, [dailyBonus.isTodayFirst, dailyBonus.isStreakBonus]);
 
   // ──────────────────────────────────
   // FTUE 閉じる
@@ -231,21 +310,35 @@ export default function App() {
       {/* ヘッダー */}
       <View style={styles.appHeader}>
         <Text style={styles.appTitle}>🌸 ひみつのデコ・ガーデン</Text>
-        <View style={styles.inventoryBadge}>
-          <Text style={styles.inventoryBadgeText}>🎒 {inventory.length}</Text>
+        <View style={styles.headerRight}>
+          {pendingBonusCount > 0 && (
+            <View style={styles.bonusBadge}>
+              <Text style={styles.bonusBadgeText}>🎁 +{pendingBonusCount}</Text>
+            </View>
+          )}
+          <View style={styles.inventoryBadge}>
+            <Text style={styles.inventoryBadgeText}>🎒 {inventory.length}</Text>
+          </View>
         </View>
       </View>
 
       {/* タブコンテンツ */}
       <View style={styles.content}>
         {activeTab === "scratch" ? (
-          <CollectionScreen onCollect={handleCollect} />
-        ) : (
+          <CollectionScreen
+            onCollect={handleCollect}
+            bonusCount={pendingBonusCount}
+            onBonusConsumed={() => setPendingBonusCount((c) => Math.max(0, c - 1))}
+          />
+        ) : activeTab === "garden" ? (
           <DecoGardenScreen
             inventory={inventory}
             onCollectMore={() => setActiveTab("scratch")}
             onItemCollected={handleItemPlaced}
+            onBonusGranted={handleBonusGranted}
           />
+        ) : (
+          <CollectionBook collectedItems={everCollected} />
         )}
       </View>
 
@@ -254,6 +347,15 @@ export default function App() {
 
       {/* FTUE */}
       <FTUEGuide visible={showFTUE} onDismiss={handleFTUEDismiss} />
+
+      {/* デイリーボーナスモーダル */}
+      <DailyBonusModal
+        visible={showDailyBonus}
+        streak={dailyBonus.streak}
+        isStreakBonus={dailyBonus.isStreakBonus}
+        message={dailyBonus.message}
+        onClose={handleDailyBonusClose}
+      />
     </SafeAreaView>
   );
 }
@@ -289,6 +391,24 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFD6EC",
     letterSpacing: 0.5,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  bonusBadge: {
+    backgroundColor: "rgba(255,215,0,0.2)",
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,215,0,0.5)",
+  },
+  bonusBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFD700",
   },
   inventoryBadge: {
     backgroundColor: "rgba(192,96,255,0.2)",

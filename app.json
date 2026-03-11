@@ -26,6 +26,16 @@
       [
         "expo-av",
         { "microphonePermission": false }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#C060FF",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "🌸 デコ・ガーデン"
+        }
       ]
     ]
   }
