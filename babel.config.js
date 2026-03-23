@@ -2,8 +2,6 @@ module.exports = function (api) {
   api.cache(true);
   return {
     presets: ["babel-preset-expo"],
-    plugins: [
-      "react-native-reanimated/plugin", // 必須・最後に置く
-    ],
+    // react-native-reanimated/plugin は Reanimated 4.x + New Architecture では不要
   };
 };

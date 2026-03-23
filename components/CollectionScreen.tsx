@@ -37,6 +37,7 @@ import { Audio } from "expo-av";
 import { ScratchCanvas } from "./ScratchCanvas";
 import { useScratchProgress } from "../hooks/useScratchProgress";
 import { drawRandomItem, ItemDef, RARITY_COLOR } from "../constants/items";
+import { useDailyLimit } from "../hooks/useDailyLimit";
 
 const { width: W } = Dimensions.get("window");
 
@@ -73,12 +74,23 @@ async function playSound(filename: string) {
 interface CollectionScreenProps {
   /** アイテムを収集したときのコールバック */
   onCollect: (item: ItemDef) => void;
+  /** 外部から付与されたボーナススクラッチ残枚数（レベルアップ・デイリーボーナス） */
+  bonusCount?: number;
+  /** ボーナスを1枚消費したときのコールバック */
+  onBonusConsumed?: () => void;
 }
 
 // ──────────────────────────────────────────────────────────────
 // メインコンポーネント
 // ──────────────────────────────────────────────────────────────
-export function CollectionScreen({ onCollect }: CollectionScreenProps) {
+export function CollectionScreen({ onCollect, bonusCount = 0, onBonusConsumed }: CollectionScreenProps) {
+  // 1日制限
+  const { remaining, maxDaily, isLimitReached, consumeOne, isLoaded } = useDailyLimit();
+
+  // ボーナスがある場合は上限到達でも「あと1枚」として扱う
+  const effectiveRemaining = remaining + bonusCount;
+  const effectiveLimitReached = isLimitReached && bonusCount <= 0;
+
   // 現在のスクラッチセッションで出現するアイテム
   const [pendingItem, setPendingItem] = useState<ItemDef | null>(null);
   const [collected, setCollected] = useState(false);
@@ -93,15 +105,24 @@ export function CollectionScreen({ onCollect }: CollectionScreenProps) {
   const collectOpacity = useSharedValue(1);
 
   // ─────────────────────────────────
-  // 80% 達成 → アイテム抽選・表示
+  // 80% 達成 → アイテム抽選・表示（1日制限チェック）
   // ─────────────────────────────────
-  const handleThresholdReached = useCallback(() => {
+  const handleThresholdReached = useCallback(async () => {
+    // 通常回数を試みる
+    let ok = await consumeOne();
+    // 通常分が尽きていてもボーナスがあれば消費して進む
+    if (!ok && bonusCount > 0) {
+      onBonusConsumed?.();
+      ok = true;
+    }
+    if (!ok) return;
+
     const item = drawRandomItem();
     setPendingItem(item);
     setCollected(false);
 
     // 「シャリーン」系効果音
-    playSound("reveal.mp3");
+    playSound("reveal.wav");
 
     // ポップイン
     itemScale.value = withSequence(
@@ -109,7 +130,7 @@ export function CollectionScreen({ onCollect }: CollectionScreenProps) {
       withSpring(1.0, { damping: 10, stiffness: 200 })
     );
     itemOpacity.value = withTiming(1, { duration: 200 });
-  }, [itemScale, itemOpacity]);
+  }, [consumeOne, itemScale, itemOpacity, bonusCount, onBonusConsumed]);
 
   // ─────────────────────────────────
   // アイテムタップ → 収集
@@ -167,8 +188,33 @@ export function CollectionScreen({ onCollect }: CollectionScreenProps) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>✨ スクラッチ ✨</Text>
         <Text style={styles.headerSub}>こすってたからものをみつけよう</Text>
+        {/* 残り回数バッジ */}
+        {isLoaded && (
+          <View style={styles.dailyBadge}>
+            <Text style={styles.dailyBadgeText}>
+              {effectiveLimitReached
+                ? "✨ きょうのぶんはおわり"
+                : bonusCount > 0
+                  ? `きょう あと ${remaining} / ${maxDaily} かい ＋ボーナス🎁${bonusCount}`
+                  : `きょう あと ${remaining} / ${maxDaily} かい`}
+            </Text>
+          </View>
+        )}
       </View>
 
+      {/* 上限到達時のメッセージ */}
+      {isLoaded && effectiveLimitReached ? (
+        <View style={styles.limitReachedArea}>
+          <Text style={styles.limitReachedEmoji}>🌙</Text>
+          <Text style={styles.limitReachedTitle}>
+            きょうの ぶんは おわりです ✨
+          </Text>
+          <Text style={styles.limitReachedSub}>
+            また あした ね{"\n"}まいにち あそびに きてね！
+          </Text>
+        </View>
+      ) : (
+        <>
       {/* スクラッチキャンバス */}
       <Animated.View style={bounceStyle}>
         <ScratchCanvas
@@ -220,6 +266,8 @@ export function CollectionScreen({ onCollect }: CollectionScreenProps) {
         >
           <Text style={styles.nextButtonText}>✨ つぎのスクラッチへ</Text>
         </Pressable>
+      )}
+        </>
       )}
     </View>
   );
@@ -321,5 +369,48 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#fff",
     letterSpacing: 1,
+  },
+
+  // 1日制限バッジ
+  dailyBadge: {
+    marginTop: 6,
+    backgroundColor: "rgba(192,96,255,0.20)",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(192,96,255,0.40)",
+  },
+  dailyBadgeText: {
+    fontSize: 12,
+    color: "#E8D6FF",
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+
+  // 上限到達メッセージ
+  limitReachedArea: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  limitReachedEmoji: {
+    fontSize: 72,
+    marginBottom: 16,
+  },
+  limitReachedTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#FFD6EC",
+    textAlign: "center",
+    marginBottom: 12,
+    letterSpacing: 1,
+  },
+  limitReachedSub: {
+    fontSize: 16,
+    color: "#C0A8E0",
+    textAlign: "center",
+    lineHeight: 26,
   },
 });

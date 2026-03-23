@@ -22,7 +22,7 @@
  */
 
 import React, { useCallback, useRef, useState } from "react";
-import { Dimensions, StyleSheet, View } from "react-native";
+import { Dimensions, StyleSheet, Text, View } from "react-native";
 import {
   Canvas,
   Circle,
@@ -198,35 +198,32 @@ export function ScratchCanvas({
 
   // ────────────────────────────────────
   // ジェスチャーハンドラー
+  // .runOnJS(true) で全コールバックをJSスレッドで実行
+  // → SkPath / ref のスレッド競合を根本解決
   // ────────────────────────────────────
   const panGesture = Gesture.Pan()
+    .runOnJS(true)
     .minDistance(0)
     .onBegin((e) => {
       if (isCleared) return;
       const p = Skia.Path.Make();
-      // 太い筆（丸いキャップ）で開始
       p.moveTo(e.x, e.y);
       currentPathRef.current = p;
-      runOnJS(setCurrentPath)(p.copy()); // Skia Pathはmutable→コピーしてReactに渡す
+      setCurrentPath(p.copy());
     })
     .onUpdate((e) => {
       if (isCleared || !currentPathRef.current) return;
-
-      // ハプティクス（UIスレッド → JSスレッドへ）
-      runOnJS(triggerScratchHaptic)(e.velocityX, e.velocityY);
-
-      // Catmull-Rom風の滑らか曲線: cubicTo
+      triggerScratchHaptic(e.velocityX, e.velocityY);
       currentPathRef.current.lineTo(e.x, e.y);
-      runOnJS(setCurrentPath)(currentPathRef.current.copy());
+      setCurrentPath(currentPathRef.current.copy());
     })
     .onEnd(() => {
       if (isCleared || !currentPathRef.current) return;
-      const finished = currentPathRef.current;
+      const finished = currentPathRef.current.copy();
       currentPathRef.current = null;
-      runOnJS(setCurrentPath)(null);
-      runOnJS(setPaths)((prev: SkPath[]) => {
+      setCurrentPath(null);
+      setPaths((prev) => {
         const next = [...prev, finished];
-        // 面積計算は非同期で
         setTimeout(() => commitCurrentPath(finished, next), 0);
         return next;
       });
@@ -262,7 +259,7 @@ export function ScratchCanvas({
                   {/* DST_OUT ブレンドで穴を開ける */}
                   <Group blendMode="clear">
                     {/* 確定済みストローク */}
-                    {paths.map((p, i) => (
+                    {(paths ?? []).map((p, i) => (
                       <Path
                         key={i}
                         path={p}
@@ -288,7 +285,7 @@ export function ScratchCanvas({
                 </Group>
 
                 {/* キラキラ粒子エフェクト（スクラッチ跡に表示）*/}
-                {paths.length > 0 && (
+                {(paths ?? []).length > 0 && (
                   <SparkleOverlay paths={paths} size={CANVAS_SIZE} />
                 )}
               </Group>
@@ -345,41 +342,184 @@ function SparkleOverlay({
 }
 
 // ──────────────────────────────────────────────────────────────
-// デフォルト「賞品」ビュー（ホログラフィック背景）
+// デフォルト「賞品ヒント」ビュー（魔法少女ホログラフィックデザイン）
+// スクラッチ前に「何かが隠れている」感を演出
 // ──────────────────────────────────────────────────────────────
 function DefaultPrize() {
+  const cx = CANVAS_SIZE / 2;
+  const cy = CANVAS_SIZE / 2;
+
+  // 外周に配置するキラキラ小粒子（固定シード）
+  const outerSparkles = React.useMemo(() => {
+    const pts: { x: number; y: number; r: number; color: string; opacity: number }[] = [];
+    const sparkColors = [
+      "#FFD6EC", "#D6F0FF", "#E8D6FF", "#FFFDE0",
+      "#FFB6F0", "#B6F0FF", "#F0FFB6",
+    ];
+    for (let i = 0; i < 24; i++) {
+      const angle = (i / 24) * Math.PI * 2;
+      const dist = CANVAS_SIZE * 0.35 + (i % 3) * 18;
+      pts.push({
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        r: 2 + (i % 4),
+        color: sparkColors[i % sparkColors.length],
+        opacity: 0.5 + (i % 5) * 0.1,
+      });
+    }
+    // ランダム散らばり粒子
+    const seedPoints = [
+      { x: cx * 0.3, y: cy * 0.4 }, { x: cx * 1.7, y: cy * 0.3 },
+      { x: cx * 0.2, y: cy * 1.6 }, { x: cx * 1.8, y: cy * 1.7 },
+      { x: cx * 0.5, y: cy * 1.2 }, { x: cx * 1.5, y: cy * 0.8 },
+      { x: cx * 1.1, y: cy * 0.2 }, { x: cx * 0.8, y: cy * 1.8 },
+    ];
+    seedPoints.forEach((pt, i) => {
+      pts.push({
+        x: pt.x, y: pt.y,
+        r: 3 + (i % 3),
+        color: sparkColors[(i + 2) % sparkColors.length],
+        opacity: 0.6 + (i % 4) * 0.1,
+      });
+    });
+    return pts;
+  }, []);
+
   return (
+    <View style={StyleSheet.absoluteFill}>
     <Canvas style={StyleSheet.absoluteFill}>
+      {/* 虹色グラデーション背景（ホログラフィック） */}
       <Fill>
         <LinearGradient
           start={vec(0, 0)}
           end={vec(CANVAS_SIZE, CANVAS_SIZE)}
           colors={[
-            COLORS.prizeGlow,
-            COLORS.holographic,
-            COLORS.prizeShine,
-            COLORS.sparkle,
+            "#FF9EE8",   // ピンク
+            "#C8A0FF",   // 薄紫
+            "#9EC8FF",   // ブルー
+            "#A0FFC8",   // ミント
+            "#FFE89E",   // ゴールド
+            "#FF9EE8",   // ピンクに戻る（ホログラフィック感）
           ]}
         />
       </Fill>
-      {/* 中央の大きな輝き */}
-      <Circle
-        cx={CANVAS_SIZE / 2}
-        cy={CANVAS_SIZE / 2}
-        r={CANVAS_SIZE * 0.3}
-        color={COLORS.sparkle}
-        opacity={0.6}
-      />
-      <Circle
-        cx={CANVAS_SIZE / 2}
-        cy={CANVAS_SIZE / 2}
-        r={CANVAS_SIZE * 0.15}
+
+      {/* 斜め方向の追加グラデーション（重ねて光沢感） */}
+      <Fill opacity={0.35}>
+        <LinearGradient
+          start={vec(CANVAS_SIZE, 0)}
+          end={vec(0, CANVAS_SIZE)}
+          colors={[
+            "#FFFFFF",
+            "#E8D6FF",
+            "#D6F0FF",
+            "#FFFFFF",
+          ]}
+        />
+      </Fill>
+
+      {/* 外周オーラ輪 */}
+      <Circle cx={cx} cy={cy} r={CANVAS_SIZE * 0.45} color="#FFFFFF" opacity={0.12} />
+      <Circle cx={cx} cy={cy} r={CANVAS_SIZE * 0.40} color="#FFD6EC" opacity={0.20} />
+      <Circle cx={cx} cy={cy} r={CANVAS_SIZE * 0.33} color="#E8D6FF" opacity={0.30} />
+
+      {/* 中心グロー */}
+      <Circle cx={cx} cy={cy} r={CANVAS_SIZE * 0.22} color="#FFFDE0" opacity={0.55} />
+      <Circle cx={cx} cy={cy} r={CANVAS_SIZE * 0.12} color="white"   opacity={0.85} />
+
+      {/* キラキラ粒子群 */}
+      {outerSparkles.map((s, i) => (
+        <Circle key={i} cx={s.x} cy={s.y} r={s.r} color={s.color} opacity={s.opacity} />
+      ))}
+
+      {/* 中心の十字スター光芒（縦・横の細いライン） */}
+      <Rect
+        x={cx - 1.5}
+        y={cy - CANVAS_SIZE * 0.28}
+        width={3}
+        height={CANVAS_SIZE * 0.56}
         color="white"
-        opacity={0.9}
+        opacity={0.55}
+      />
+      <Rect
+        x={cx - CANVAS_SIZE * 0.28}
+        y={cy - 1.5}
+        width={CANVAS_SIZE * 0.56}
+        height={3}
+        color="white"
+        opacity={0.55}
       />
     </Canvas>
+
+    {/* ?マーク + 輝くオーラ テキストオーバーレイ */}
+    <View style={defaultPrizeStyles.overlay} pointerEvents="none">
+      {/* 外周オーラリング */}
+      <View style={defaultPrizeStyles.auraOuter} />
+      <View style={defaultPrizeStyles.auraInner} />
+      {/* ?マーク */}
+      <Text style={defaultPrizeStyles.questionMark}>？</Text>
+      {/* 下部ヒントテキスト */}
+      <Text style={defaultPrizeStyles.hintText}>こすってみて✨</Text>
+    </View>
+    </View>
   );
 }
+
+// ──────────────────────────────────────────────────────────────
+// DefaultPrize スタイル
+// ──────────────────────────────────────────────────────────────
+const defaultPrizeStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  auraOuter: {
+    position: "absolute",
+    width: CANVAS_SIZE * 0.72,
+    height: CANVAS_SIZE * 0.72,
+    borderRadius: CANVAS_SIZE * 0.36,
+    borderWidth: 3,
+    borderColor: "rgba(255,214,236,0.55)",
+    shadowColor: "#FFD6EC",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 24,
+  },
+  auraInner: {
+    position: "absolute",
+    width: CANVAS_SIZE * 0.52,
+    height: CANVAS_SIZE * 0.52,
+    borderRadius: CANVAS_SIZE * 0.26,
+    borderWidth: 2,
+    borderColor: "rgba(232,214,255,0.70)",
+    shadowColor: "#E8D6FF",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 16,
+  },
+  questionMark: {
+    fontSize: CANVAS_SIZE * 0.28,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    textShadowColor: "#C060FF",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 24,
+    opacity: 0.92,
+    marginBottom: 4,
+  },
+  hintText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFDE0",
+    textShadowColor: "#FF80C0",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+    letterSpacing: 1,
+    opacity: 0.85,
+    marginTop: 8,
+  },
+});
 
 // ──────────────────────────────────────────────────────────────
 // スタイル

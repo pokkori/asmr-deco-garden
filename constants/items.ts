@@ -70,3 +70,63 @@ export const RARITY_COLOR: Record<Rarity, string> = {
   epic:      "#C060FF",
   legendary: "#FFD700",
 };
+
+// ──────────────────────────────────────────────────────────────
+// テーマセット定義
+// ──────────────────────────────────────────────────────────────
+
+export interface ItemSet {
+  id: string;
+  name: string;           // 表示名（ひらがな）
+  emoji: string;          // セットアイコン絵文字
+  itemIds: string[];      // セットを構成するアイテムID
+  rewardEmoji: string;    // セット完成ボーナスアイテム絵文字
+  rewardLabel: string;    // ボーナスアイテム名
+}
+
+export const ITEM_SETS: ItemSet[] = [
+  {
+    id: "spring",
+    name: "はるのいろ",
+    emoji: "🌸",
+    itemIds: ["flower_pink", "butterfly", "leaf", "star_shoot"],
+    rewardEmoji: "🌺",
+    rewardLabel: "さくらのき",
+  },
+  {
+    id: "magic",
+    name: "まほうのせかい",
+    emoji: "🔮",
+    itemIds: ["unicorn", "crystal", "crown", "rainbow"],
+    rewardEmoji: "🏰",
+    rewardLabel: "まほうのしろ",
+  },
+  {
+    id: "cosmos",
+    name: "ほしぞら",
+    emoji: "⭐",
+    itemIds: ["star_yellow", "star_shoot", "dragon", "phoenix"],
+    rewardEmoji: "🌌",
+    rewardLabel: "ぎんがのとびら",
+  },
+];
+
+/**
+ * 収集済みアイテムIDリストから、完成しているセットIDを返す
+ */
+export function getCompletedSets(collectedIds: string[]): ItemSet[] {
+  return ITEM_SETS.filter((set) =>
+    set.itemIds.every((id) => collectedIds.includes(id))
+  );
+}
+
+/**
+ * セットの進捗を返す（完成数 / 必要数）
+ */
+export function getSetProgress(
+  set: ItemSet,
+  collectedIds: string[]
+): { done: number; total: number } {
+  const done = set.itemIds.filter((id) => collectedIds.includes(id)).length;
+  return { done, total: set.itemIds.length };
+}
