@@ -185,17 +185,31 @@ export function CollectionScreen({ onCollect, bonusCount = 0, onBonusConsumed }:
   return (
     <View style={styles.root}>
       {/* ヘッダー */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>✨ スクラッチ ✨</Text>
-        <Text style={styles.headerSub}>こすってたからものをみつけよう</Text>
+      <View style={styles.header} accessibilityRole="header">
+        <Text style={styles.headerTitle} accessibilityRole="header">
+          スクラッチ
+        </Text>
+        <Text style={styles.headerSub} accessibilityRole="text">
+          こすってたからものをみつけよう
+        </Text>
         {/* 残り回数バッジ */}
         {isLoaded && (
-          <View style={styles.dailyBadge}>
+          <View
+            style={styles.dailyBadge}
+            accessibilityLabel={
+              effectiveLimitReached
+                ? "今日のスクラッチは終了しました"
+                : bonusCount > 0
+                  ? `今日のスクラッチ残り${remaining}回・ボーナス${bonusCount}回`
+                  : `今日のスクラッチ残り${remaining}回（最大${maxDaily}回）`
+            }
+            accessibilityRole="text"
+          >
             <Text style={styles.dailyBadgeText}>
               {effectiveLimitReached
-                ? "✨ きょうのぶんはおわり"
+                ? "きょうのぶんはおわり"
                 : bonusCount > 0
-                  ? `きょう あと ${remaining} / ${maxDaily} かい ＋ボーナス🎁${bonusCount}`
+                  ? `きょう あと ${remaining} / ${maxDaily} かい ＋ボーナス${bonusCount}`
                   : `きょう あと ${remaining} / ${maxDaily} かい`}
             </Text>
           </View>

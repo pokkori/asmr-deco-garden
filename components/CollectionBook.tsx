@@ -75,6 +75,8 @@ function ItemCell({
         collected && styles.cellCollected,
         collected && { borderColor: rarityColor + "80" },
       ]}
+      accessibilityLabel={collected ? `${item.label}（${item.rarity}）収集済み` : "未収集のアイテム"}
+      accessibilityRole="text"
     >
       {collected && (
         <Animated.View
@@ -117,19 +119,31 @@ function SetProgressBar({
   const isComplete = done === total;
 
   return (
-    <View style={styles.setRow}>
-      <Text style={styles.setEmoji}>{set.emoji}</Text>
+    <View
+      style={styles.setRow}
+      accessibilityLabel={`${set.name}：${done}/${total}こ収集${isComplete ? "・コンプリート" : `・あと${total - done}こ`}`}
+      accessibilityRole="text"
+    >
+      <Text style={styles.setEmoji} accessibilityLabel={set.name}>{set.emoji}</Text>
       <View style={styles.setInfo}>
         <View style={styles.setNameRow}>
           <Text style={styles.setName}>{set.name}</Text>
-          {isComplete && <Text style={styles.setComplete}>✅ かんせい！</Text>}
+          {isComplete && (
+            <Text style={styles.setComplete} accessibilityLabel="コンプリート">
+              かんせい！
+            </Text>
+          )}
         </View>
-        <View style={styles.setBarBg}>
+        <View
+          style={styles.setBarBg}
+          accessibilityLabel={`進捗${Math.round(ratio * 100)}パーセント`}
+          accessibilityRole="progressbar"
+        >
           <View style={[styles.setBarFill, { width: `${ratio * 100}%` }]} />
         </View>
         <Text style={styles.setCount}>
           {done} / {total}
-          {isComplete ? "  🏆" : `  あと${total - done}こ`}
+          {isComplete ? "  コンプリート" : `  あと${total - done}こ`}
         </Text>
       </View>
     </View>
@@ -163,17 +177,28 @@ export function CollectionBook({ collectedItems }: CollectionBookProps) {
       showsVerticalScrollIndicator={false}
     >
       {/* ヘッダー */}
-      <View style={styles.header}>
-        <Text style={styles.title}>📖 ずかん</Text>
-        <Text style={styles.subtitle}>
+      <View style={styles.header} accessibilityRole="header">
+        <Text style={styles.title} accessibilityRole="header">ずかん</Text>
+        <Text
+          style={styles.subtitle}
+          accessibilityLabel={`${collectedKinds}種類中${totalKinds}種類収集済み`}
+        >
           {collectedKinds} / {totalKinds} しゅるい しゅうしゅう
         </Text>
         {remaining > 0 ? (
-          <Text style={styles.remainingText}>
+          <Text
+            style={styles.remainingText}
+            accessibilityLabel={`あと${remaining}種類でコンプリート`}
+          >
             あと{remaining}しゅるいでコンプリート！
           </Text>
         ) : (
-          <Text style={styles.completeText}>🎊 ぜんぶ あつめた！すごい！</Text>
+          <Text
+            style={styles.completeText}
+            accessibilityLabel="全種類コンプリート！すごい！"
+          >
+            ぜんぶ あつめた！すごい！
+          </Text>
         )}
       </View>
 
@@ -314,12 +339,12 @@ const styles = StyleSheet.create({
   setRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(255,255,255,0.08)",
     borderRadius: 14,
     padding: 12,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "rgba(200,160,255,0.15)",
+    borderColor: "rgba(200,160,255,0.25)",
   },
   setEmoji: {
     fontSize: 32,

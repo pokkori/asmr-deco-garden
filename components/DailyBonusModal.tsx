@@ -73,40 +73,66 @@ export function DailyBonusModal({
   const dots = Array.from({ length: 7 }, (_, i) => i + 1);
 
   return (
-    <Modal transparent visible={visible} animationType="none">
-      <Pressable style={styles.overlay} onPress={onClose}>
+    <Modal
+      transparent
+      visible={visible}
+      animationType="none"
+      accessibilityViewIsModal
+    >
+      <Pressable
+        style={styles.overlay}
+        onPress={onClose}
+        accessibilityLabel="デイリーボーナスモーダルを閉じる"
+        accessibilityRole="button"
+      >
         <Animated.View style={[StyleSheet.absoluteFill, styles.overlayBg, overlayStyle]} />
-        <Pressable onPress={() => {}}>
-          <Animated.View style={[styles.card, cardStyle]}>
+        <Pressable onPress={() => {}} accessibilityLabel="デイリーボーナス通知">
+          <Animated.View
+            style={[styles.card, cardStyle]}
+            accessibilityLabel={`デイリーボーナス：${isStreakBonus ? "7日連続ログインボーナス" : "おはようボーナス"}。${message}`}
+            accessibilityRole="alert"
+          >
             {/* プレゼントアイコン */}
-            <Animated.Text style={[styles.gift, giftStyle]}>
+            <Animated.Text
+              style={[styles.gift, giftStyle]}
+              accessibilityLabel={isStreakBonus ? "ドラゴン（7日連続ボーナス）" : "プレゼント（デイリーボーナス）"}
+            >
               {isStreakBonus ? "🐉" : "🎁"}
             </Animated.Text>
 
-            <Text style={styles.title}>
+            <Text style={styles.title} accessibilityRole="text">
               {isStreakBonus ? "7日れんぞく！すごい！" : "おはよう！"}
             </Text>
 
-            <Text style={styles.message}>{message}</Text>
+            <Text style={styles.message} accessibilityRole="text">{message}</Text>
 
             {/* 連続ログインドット */}
-            <View style={styles.streakRow}>
-              {dots.map((d) => (
-                <View
-                  key={d}
-                  style={[
-                    styles.streakDot,
-                    d <= streak % 7 || (streak > 0 && streak % 7 === 0 && d <= 7)
-                      ? styles.streakDotActive
-                      : styles.streakDotInactive,
-                  ]}
-                >
-                  <Text style={styles.streakDotText}>{d}</Text>
-                </View>
-              ))}
+            <View
+              style={styles.streakRow}
+              accessibilityLabel={`連続ログイン${streak}日目`}
+              accessibilityRole="text"
+            >
+              {dots.map((d) => {
+                const isActive = d <= streak % 7 || (streak > 0 && streak % 7 === 0 && d <= 7);
+                return (
+                  <View
+                    key={d}
+                    style={[
+                      styles.streakDot,
+                      isActive ? styles.streakDotActive : styles.streakDotInactive,
+                    ]}
+                    accessibilityLabel={`${d}日目${isActive ? "：達成済み" : "：未達成"}`}
+                  >
+                    <Text style={styles.streakDotText}>{d}</Text>
+                  </View>
+                );
+              })}
             </View>
-            <Text style={styles.streakLabel}>
-              {streak}日れんぞく 🔥  あと{7 - (streak % 7 || 7)}日でスペシャルボーナス！
+            <Text
+              style={styles.streakLabel}
+              accessibilityLabel={`${streak}日連続ログイン。あと${7 - (streak % 7 || 7)}日でスペシャルボーナス`}
+            >
+              {streak}日れんぞく  あと{7 - (streak % 7 || 7)}日でスペシャルボーナス！
             </Text>
 
             <Pressable

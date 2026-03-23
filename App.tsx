@@ -39,6 +39,7 @@ import { DecoGardenScreen } from "./components/DecoGardenScreen";
 import { CollectionBook } from "./components/CollectionBook";
 import { FTUEGuide } from "./components/FTUEGuide";
 import { DailyBonusModal } from "./components/DailyBonusModal";
+import { LegalScreen } from "./components/LegalScreen";
 import { ItemDef } from "./constants/items";
 import { useDailyBonus } from "./hooks/useDailyBonus";
 import { useNotifications } from "./hooks/useNotifications";
@@ -55,10 +56,10 @@ const STORAGE_KEY_EVER_COLLECTED = "deco_garden_ever_collected";
 
 type Tab = "scratch" | "garden" | "book";
 
-const TABS: { id: Tab; label: string; emoji: string }[] = [
-  { id: "scratch", label: "スクラッチ", emoji: "🪄" },
-  { id: "garden",  label: "にわ",       emoji: "🌸" },
-  { id: "book",    label: "ずかん",     emoji: "📖" },
+const TABS: { id: Tab; label: string; emoji: string; accessLabel: string }[] = [
+  { id: "scratch", label: "スクラッチ", emoji: "🪄", accessLabel: "スクラッチ画面：アイテムを集める" },
+  { id: "garden",  label: "にわ",       emoji: "🌸", accessLabel: "にわ画面：ガーデンにアイテムを飾る" },
+  { id: "book",    label: "ずかん",     emoji: "📖", accessLabel: "ずかん画面：収集したアイテムを確認する" },
 ];
 
 // ──────────────────────────────────────────────────────────────
@@ -83,9 +84,10 @@ function TabBar({
               Haptics.selectionAsync();
               onSelect(tab.id);
             }}
-            accessibilityLabel={`${tab.label}タブ`}
+            accessibilityLabel={tab.accessLabel}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
+            accessibilityHint={isActive ? "現在のタブ" : "タップして切り替え"}
           >
             <Text style={tabStyles.emoji}>{tab.emoji}</Text>
             <Text
@@ -270,6 +272,7 @@ export default function App() {
   // App レベルのボーナスカウンター stateで管理する
   // ──────────────────────────────────
   const [pendingBonusCount, setPendingBonusCount] = useState(0);
+  const [showLegal, setShowLegal] = useState(false);
 
   const handleBonusGranted = useCallback(() => {
     setPendingBonusCount((c) => c + 1);
@@ -300,8 +303,14 @@ export default function App() {
 
   if (loading) {
     return (
-      <View style={styles.loading}>
-        <Text style={styles.loadingText}>✨</Text>
+      <View
+        style={styles.loading}
+        accessibilityLabel="ロード中"
+        accessibilityRole="progressbar"
+      >
+        <Text style={styles.loadingText} accessibilityLabel="ロード中">
+          ロード中...
+        </Text>
       </View>
     );
   }
@@ -311,16 +320,37 @@ export default function App() {
       <StatusBar barStyle="light-content" backgroundColor="#1A1030" />
 
       {/* ヘッダー */}
-      <View style={styles.appHeader}>
-        <Text style={styles.appTitle}>🌸 ひみつのデコ・ガーデン</Text>
+      <View
+        style={styles.appHeader}
+        accessibilityRole="header"
+        accessibilityLabel="ひみつのデコ・ガーデン アプリヘッダー"
+      >
+        <Pressable
+          onPress={() => setShowLegal(true)}
+          accessibilityLabel="ひみつのデコ・ガーデン タイトル（タップで法的情報を表示）"
+          accessibilityRole="button"
+          accessibilityHint="プライバシーポリシー・利用規約を確認できます"
+        >
+          <Text style={styles.appTitle}>
+            ひみつのデコ・ガーデン
+          </Text>
+        </Pressable>
         <View style={styles.headerRight}>
           {pendingBonusCount > 0 && (
-            <View style={styles.bonusBadge}>
-              <Text style={styles.bonusBadgeText}>🎁 +{pendingBonusCount}</Text>
+            <View
+              style={styles.bonusBadge}
+              accessibilityLabel={`ボーナス残り${pendingBonusCount}回`}
+              accessibilityRole="text"
+            >
+              <Text style={styles.bonusBadgeText}>+{pendingBonusCount} ボーナス</Text>
             </View>
           )}
-          <View style={styles.inventoryBadge}>
-            <Text style={styles.inventoryBadgeText}>🎒 {inventory.length}</Text>
+          <View
+            style={styles.inventoryBadge}
+            accessibilityLabel={`もちもの${inventory.length}こ`}
+            accessibilityRole="text"
+          >
+            <Text style={styles.inventoryBadgeText}>もちもの {inventory.length}</Text>
           </View>
         </View>
       </View>
@@ -358,6 +388,12 @@ export default function App() {
         isStreakBonus={dailyBonus.isStreakBonus}
         message={dailyBonus.message}
         onClose={handleDailyBonusClose}
+      />
+
+      {/* 法的情報モーダル */}
+      <LegalScreen
+        visible={showLegal}
+        onClose={() => setShowLegal(false)}
       />
     </SafeAreaView>
   );

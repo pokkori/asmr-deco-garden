@@ -68,16 +68,45 @@ export function LevelUpModal({ visible, level, message, onClose }: LevelUpModalP
   }));
 
   return (
-    <Modal transparent visible={visible} animationType="none">
-      <Pressable style={styles.overlay} onPress={onClose}>
+    <Modal
+      transparent
+      visible={visible}
+      animationType="none"
+      accessibilityViewIsModal
+    >
+      <Pressable
+        style={styles.overlay}
+        onPress={onClose}
+        accessibilityLabel="レベルアップモーダルを閉じる"
+        accessibilityRole="button"
+      >
         <Animated.View style={[StyleSheet.absoluteFill, styles.overlayBg, overlayStyle]} />
-        <Pressable onPress={() => {}}>
-          <Animated.View style={[styles.card, cardStyle]}>
-            <Animated.Text style={[styles.star, starStyle]}>⭐</Animated.Text>
-            <Text style={styles.levelUpText}>LEVEL UP!</Text>
-            <Text style={styles.levelText}>Lv {level}</Text>
-            <Text style={styles.message}>{message}</Text>
-            <Pressable style={styles.closeBtn} onPress={onClose}>
+        <Pressable onPress={() => {}} accessibilityLabel="レベルアップ通知カード">
+          <Animated.View
+            style={[styles.card, cardStyle]}
+            accessibilityLabel={`レベルアップ！レベル${level}になりました。${message}`}
+            accessibilityRole="alert"
+          >
+            <Animated.Text
+              style={[styles.star, starStyle]}
+              accessibilityLabel="レベルアップスター"
+            >
+              ★
+            </Animated.Text>
+            <Text style={styles.levelUpText} accessibilityRole="text">LEVEL UP!</Text>
+            <Text
+              style={styles.levelText}
+              accessibilityLabel={`レベル${level}`}
+            >
+              Lv {level}
+            </Text>
+            <Text style={styles.message} accessibilityRole="text">{message}</Text>
+            <Pressable
+              style={styles.closeBtn}
+              onPress={onClose}
+              accessibilityLabel="レベルアップを確認して閉じる"
+              accessibilityRole="button"
+            >
               <Text style={styles.closeBtnText}>やったー！</Text>
             </Pressable>
           </Animated.View>
@@ -112,6 +141,7 @@ const styles = StyleSheet.create({
   },
   star: {
     fontSize: 56,
+    color: "#FFD700",
     marginBottom: 8,
   },
   levelUpText: {

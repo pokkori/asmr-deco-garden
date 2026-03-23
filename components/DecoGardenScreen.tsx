@@ -149,6 +149,8 @@ function DraggablePlaced({
             <Pressable
               style={[styles.deleteBtn, styles.deleteBtnCancel]}
               onPress={() => setConfirmDelete(false)}
+              accessibilityLabel="キャンセル：アイテムをはずすのをやめる"
+              accessibilityRole="button"
             >
               <Text style={styles.deleteBtnText}>やめる</Text>
             </Pressable>
@@ -158,6 +160,8 @@ function DraggablePlaced({
                 setConfirmDelete(false);
                 onRemove(item.uid);
               }}
+              accessibilityLabel={`${item.emoji}をガーデンからはずす`}
+              accessibilityRole="button"
             >
               <Text style={styles.deleteBtnText}>はずす</Text>
             </Pressable>
@@ -194,6 +198,9 @@ function InventoryItem({
         onPlace(item);
       }}
       style={styles.invItem}
+      accessibilityLabel={`${item.label}（${item.rarity}）をガーデンに配置する`}
+      accessibilityRole="button"
+      accessibilityHint="タップするとガーデンに追加されます"
     >
       <Animated.View style={animStyle}>
         <View
@@ -298,22 +305,37 @@ export function DecoGardenScreen({
       {/* ガーデンヘッダー：レベル＋美しさスコア */}
       <View style={styles.gardenHeader}>
         <View style={styles.gardenTitleRow}>
-          <Text style={styles.gardenTitle}>🌸 わたしのにわ</Text>
-          <View style={styles.levelBadge}>
+          <Text style={styles.gardenTitle} accessibilityRole="header">
+            わたしのにわ
+          </Text>
+          <View
+            style={styles.levelBadge}
+            accessibilityLabel={`ガーデンレベル${level}`}
+            accessibilityRole="text"
+          >
             <Text style={styles.levelBadgeText}>Lv {level}</Text>
           </View>
         </View>
         <View style={styles.headerBottomRow}>
-          <View style={styles.beautyScoreWrap}>
+          <View
+            style={styles.beautyScoreWrap}
+            accessibilityLabel={`うつくしさ${beautyStars}つ星・${beautyScore}ポイント`}
+            accessibilityRole="text"
+          >
             <Text style={styles.beautyLabel}>うつくしさ</Text>
-            <Text style={styles.beautyStars}>
+            <Text style={styles.beautyStars} accessibilityLabel={`${beautyStars}つ星`}>
               {"★".repeat(beautyStars)}{"☆".repeat(5 - beautyStars)}
             </Text>
             <Text style={styles.beautyPoints}>{beautyScore}pt</Text>
           </View>
           {placed.length > 0 && (
-            <Pressable onPress={handleShareGarden} style={styles.shareBtn}>
-              <Text style={styles.shareBtnText}>🐦 シェア</Text>
+            <Pressable
+              onPress={handleShareGarden}
+              style={styles.shareBtn}
+              accessibilityLabel={`ガーデンをシェアする（Lv${level}・うつくしさ${beautyScore}pt）`}
+              accessibilityRole="button"
+            >
+              <Text style={styles.shareBtnText}>シェア</Text>
             </Pressable>
           )}
         </View>
@@ -365,10 +387,19 @@ export function DecoGardenScreen({
       {/* インベントリ */}
       <View style={styles.inventoryContainer}>
         <View style={styles.inventoryHeader}>
-          <Text style={styles.inventoryTitle}>
-            🎒 もちもの ({inventory.length}こ)
+          <Text
+            style={styles.inventoryTitle}
+            accessibilityRole="text"
+            accessibilityLabel={`もちもの${inventory.length}こ`}
+          >
+            もちもの ({inventory.length}こ)
           </Text>
-          <Pressable onPress={onCollectMore} style={styles.moreBtn}>
+          <Pressable
+            onPress={onCollectMore}
+            style={styles.moreBtn}
+            accessibilityLabel="スクラッチ画面でアイテムを集める"
+            accessibilityRole="button"
+          >
             <Text style={styles.moreBtnText}>＋ あつめる</Text>
           </Pressable>
         </View>
@@ -417,8 +448,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(200,160,255,0.15)",
+    borderBottomColor: "rgba(200,160,255,0.25)",
     gap: 6,
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   gardenTitleRow: {
     flexDirection: "row",
@@ -540,8 +572,8 @@ const styles = StyleSheet.create({
   inventoryContainer: {
     height: INVENTORY_HEIGHT,
     borderTopWidth: 1,
-    borderTopColor: "rgba(200,160,255,0.2)",
-    backgroundColor: "rgba(30,16,60,0.9)",
+    borderTopColor: "rgba(200,160,255,0.3)",
+    backgroundColor: "rgba(30,16,60,0.85)",
   },
   inventoryHeader: {
     flexDirection: "row",
@@ -557,10 +589,14 @@ const styles = StyleSheet.create({
     color: "#E8D6FF",
   },
   moreBtn: {
-    backgroundColor: "#C060FF",
+    backgroundColor: "rgba(192,96,255,0.85)",
     borderRadius: 14,
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(192,96,255,0.5)",
+    minHeight: 32,
+    justifyContent: "center",
   },
   moreBtnText: {
     fontSize: 12,
