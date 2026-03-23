@@ -43,6 +43,8 @@ function XShareButton({ item, level }: { item: ItemDef; level: number }) {
     <Pressable
       onPress={handleShare}
       style={[styles.shareBtn, { borderColor: rarityColor + "80" }]}
+      accessibilityLabel="Xでシェアする"
+      accessibilityRole="button"
     >
       <Text style={styles.shareBtnIcon}>𝕏</Text>
       <Text style={styles.shareBtnText}>Xでシェアする</Text>

@@ -83,6 +83,9 @@ function TabBar({
               Haptics.selectionAsync();
               onSelect(tab.id);
             }}
+            accessibilityLabel={`${tab.label}タブ`}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
           >
             <Text style={tabStyles.emoji}>{tab.emoji}</Text>
             <Text

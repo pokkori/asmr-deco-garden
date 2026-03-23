@@ -226,7 +226,12 @@ export function CollectionScreen({ onCollect, bonusCount = 0, onBonusConsumed }:
 
       {/* 出現アイテム */}
       {pendingItem && (
-        <Pressable onPress={handleCollectTap} style={styles.itemArea}>
+        <Pressable
+          onPress={handleCollectTap}
+          style={styles.itemArea}
+          accessibilityLabel={`${pendingItem.label}を収集する`}
+          accessibilityRole="button"
+        >
           <Animated.View style={[styles.itemCard, itemStyle]}>
             {/* レアリティグロー */}
             <View
@@ -263,6 +268,8 @@ export function CollectionScreen({ onCollect, bonusCount = 0, onBonusConsumed }:
           style={styles.nextButton}
           onPress={handleNext}
           android_ripple={{ color: "#FF80C0" }}
+          accessibilityLabel="次のスクラッチへ進む"
+          accessibilityRole="button"
         >
           <Text style={styles.nextButtonText}>✨ つぎのスクラッチへ</Text>
         </Pressable>

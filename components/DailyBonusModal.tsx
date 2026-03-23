@@ -109,7 +109,12 @@ export function DailyBonusModal({
               {streak}日れんぞく 🔥  あと{7 - (streak % 7 || 7)}日でスペシャルボーナス！
             </Text>
 
-            <Pressable style={styles.closeBtn} onPress={onClose}>
+            <Pressable
+              style={styles.closeBtn}
+              onPress={onClose}
+              accessibilityLabel="デイリーボーナスを受け取る"
+              accessibilityRole="button"
+            >
               <Text style={styles.closeBtnText}>うけとる！</Text>
             </Pressable>
           </Animated.View>

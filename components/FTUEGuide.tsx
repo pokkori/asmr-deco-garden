@@ -263,13 +263,20 @@ export function FTUEGuide({ visible, onDismiss }: FTUEGuideProps) {
           {/* ボタン行 */}
           <View style={styles.btnRow}>
             {!isLastStep && (
-              <Pressable onPress={handleSkip} style={styles.skipBtn}>
+              <Pressable
+                onPress={handleSkip}
+                style={styles.skipBtn}
+                accessibilityLabel="チュートリアルをスキップする"
+                accessibilityRole="button"
+              >
                 <Text style={styles.skipBtnText}>スキップ</Text>
               </Pressable>
             )}
             <Pressable
               onPress={handleNext}
               style={[styles.nextBtn, isLastStep && styles.nextBtnFull]}
+              accessibilityLabel={isLastStep ? "ゲームをはじめる" : "次のステップへ進む"}
+              accessibilityRole="button"
             >
               <Text style={styles.nextBtnText}>
                 {isLastStep ? "🌸 はじめる！" : "つぎへ →"}
