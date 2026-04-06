@@ -102,11 +102,11 @@ export function useDailyBonus(): DailyBonusResult {
 
         let message = "";
         if (isStreakBonus) {
-          message = `🎊 ${newStreak}日れんぞくログイン！\nスペシャルレジェンダリーアイテム確定！🐉`;
+          message = `${newStreak}日れんぞくログイン！\nスペシャルレジェンダリーアイテム確定！`;
         } else if (newStreak >= 3) {
-          message = `おはよう！${newStreak}日れんぞくボーナス✨\nスクラッチ1まいプレゼント🎁`;
+          message = `おはよう！${newStreak}日れんぞくボーナス！\nスクラッチ1まいプレゼント！`;
         } else {
-          message = `おはよう！きょうも1まいプレゼント🎁\nがんばって！`;
+          message = `おはよう！きょうも1まいプレゼント！\nがんばって！`;
         }
 
         setResult({
